@@ -5,10 +5,16 @@ import android.os.Bundle;
 
 import org.peterkwan.udacity.popularmovies.data.Movie;
 
+import butterknife.BindBool;
+import butterknife.ButterKnife;
+
 public class MovieDetailActivity extends BaseActivity {
 
     private static final String MOVIE = "movie";
     private Movie movie = null;
+
+    @BindBool(R.bool.two_pane_layout)
+    boolean isTwoPaneLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,10 +24,16 @@ public class MovieDetailActivity extends BaseActivity {
         if (intent != null && intent.getParcelableExtra(MOVIE) != null)
             movie = intent.getParcelableExtra(MOVIE);
 
-        setContentView(R.layout.activity_movie_detail);
+        ButterKnife.bind(this);
+        if (isTwoPaneLayout) {
+            finish();
+            return;
+        }
 
+        setContentView(R.layout.activity_movie_detail);
         setTitle(movie.getTitle());
         initMovieDetailFragment();
+
     }
 
     private void initMovieDetailFragment() {

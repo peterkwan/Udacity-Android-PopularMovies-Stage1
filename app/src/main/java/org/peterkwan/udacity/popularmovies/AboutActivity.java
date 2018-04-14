@@ -13,7 +13,7 @@ public class AboutActivity extends BaseActivity implements AboutFragment.OnListI
         SoftwareListFragment.OnListItemClickListener {
 
     private static final String SOFTWARE = "software";
-    private static final String ABOUT_FRAGMENT = "aboutFragment";
+//    private static final String ABOUT_FRAGMENT = "aboutFragment";
     private static final String SOFTWARE_LIST_FRAGMENT = "softwareListFragment";
     private static final String LICENSE_DETAIL_FRAGMENT = "licenseDetailFragment";
     private static final String FRAGMENT = "fragment";
@@ -30,7 +30,7 @@ public class AboutActivity extends BaseActivity implements AboutFragment.OnListI
 
         if (savedInstanceState == null || !savedInstanceState.containsKey(FRAGMENT)) {
             fragmentManager.beginTransaction()
-                    .add(R.id.aboutFragmentContainer, new AboutFragment(), ABOUT_FRAGMENT)
+                    .add(R.id.aboutFragmentContainer, new AboutFragment())
                     .commit();
         }
         else

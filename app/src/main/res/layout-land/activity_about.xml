@@ -11,9 +11,8 @@
         android:layout_height="match_parent"
         android:layout_weight="1" />
 
-    <fragment
+    <FrameLayout
         android:id="@+id/licenseDetailFragmentContainer"
-        android:name="org.peterkwan.udacity.popularmovies.LicenseDetailFragment"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="3" />

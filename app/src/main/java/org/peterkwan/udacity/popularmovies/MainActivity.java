@@ -13,7 +13,6 @@ import butterknife.ButterKnife;
 public class MainActivity extends BaseActivity implements MovieListFragment.OnMovieListClickListener {
 
     private static final String MOVIE = "movie";
-    private static final String MOVIE_DETAIL_FRAGMENT = "movieDetailFragment";
 
     @BindBool(R.bool.two_pane_layout)
     boolean isTwoPaneLayout;
@@ -61,6 +60,6 @@ public class MainActivity extends BaseActivity implements MovieListFragment.OnMo
         MovieDetailFragment fragment = new MovieDetailFragment();
         fragment.setArguments(bundle);
 
-        replaceFragment(R.id.movieDetailFragmentContainer, fragment, MOVIE_DETAIL_FRAGMENT);
+        replaceFragment(R.id.movieDetailFragmentContainer, fragment, null);
     }
 }

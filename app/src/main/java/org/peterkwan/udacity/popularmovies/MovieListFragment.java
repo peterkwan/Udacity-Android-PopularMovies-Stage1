@@ -1,6 +1,5 @@
 package org.peterkwan.udacity.popularmovies;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -65,7 +64,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     private MovieListAdapter movieListAdapter;
     private Unbinder unbinder;
     private ArrayList<Movie> movieList;
-    private Activity activity;
+    private Context activity;
     private SharedPreferences sharedPreferences;
 
     @BindView(R.id.sortOrderSpinner)
@@ -92,7 +91,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     @BindInt(R.integer.grid_view_column_count)
     int gridViewColumnCount;
 
-    private Handler handler;
+    private static Handler handler;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
@@ -212,44 +211,8 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
 
     @NonNull
     @Override
-    public Loader<List<Movie>> onCreateLoader(int id, @Nullable final Bundle args) {
-        return new AsyncTaskLoader<List<Movie>>(activity) {
-            List<Movie> movies = null;
-
-            @Override
-            protected void onStartLoading() {
-                if (movies != null)
-                    deliverResult(movies);
-                else {
-                    sendMessageToUIThread(LOAD_DATA_STARTING);
-                    forceLoad();
-                }
-            }
-
-            @Nullable
-            @Override
-            public List<Movie> loadInBackground() {
-                if (args == null || !args.containsKey(SORT_ORDER))
-                    return null;
-
-                if (NetworkUtils.isNetworkDisconnected(activity))
-                    return null;
-
-                try {
-                    String resultJson = NetworkUtils.retrieveMovieListFromTMdb(args.getString(SORT_ORDER), BuildConfig.API_KEY);
-                    return JsonUtils.constructMovieListFromJson(resultJson);
-                } catch (IOException | JSONException e) {
-                    Log.e(LOG_TAG, "Error loading data", e);
-                    return null;
-                }
-            }
-
-            @Override
-            public void deliverResult(@Nullable List<Movie> data) {
-                movies = data;
-                super.deliverResult(data);
-            }
-        };
+    public Loader<List<Movie>> onCreateLoader(int id, @Nullable Bundle args) {
+        return new AsyncMovieTaskLoader(activity, args);
     }
 
     @Override
@@ -306,10 +269,55 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
         return args;
     }
 
-    private void sendMessageToUIThread(int messageId) {
+    private static void sendMessageToUIThread(int messageId) {
         Message msg = new Message();
         msg.what = messageId;
         handler.sendMessage(msg);
     }
 
+    static class AsyncMovieTaskLoader extends AsyncTaskLoader<List<Movie>> {
+        List<Movie> movies = null;
+        final Bundle args;
+
+        AsyncMovieTaskLoader(Context context, Bundle args) {
+            super(context);
+            this.args = args;
+        }
+
+        @Override
+        protected void onStartLoading() {
+            super.onStartLoading();
+
+            if (movies != null)
+                deliverResult(movies);
+            else {
+                sendMessageToUIThread(LOAD_DATA_STARTING);
+                forceLoad();
+            }
+        }
+
+        @Nullable
+        @Override
+        public List<Movie> loadInBackground() {
+            if (args == null || !args.containsKey(SORT_ORDER))
+                return null;
+
+            if (NetworkUtils.isNetworkDisconnected(getContext()))
+                return null;
+
+            try {
+                String resultJson = NetworkUtils.retrieveMovieListFromTMdb(args.getString(SORT_ORDER), BuildConfig.API_KEY);
+                return JsonUtils.constructMovieListFromJson(resultJson);
+            } catch (IOException | JSONException e) {
+                Log.e(LOG_TAG, "Error loading data", e);
+                return null;
+            }
+        }
+
+        @Override
+        public void deliverResult(@Nullable List<Movie> data) {
+            movies = data;
+            super.deliverResult(data);
+        }
+    }
 }
