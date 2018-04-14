@@ -111,8 +111,10 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String sortOrder = sortOrderValues[position];
-                sharedPreferences.edit().putString(sortOrderPrefKey, sortOrder).apply();
-                reloadMovieList(sortOrder);
+                if (!sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]).equals(sortOrder)) {
+                    sharedPreferences.edit().putString(sortOrderPrefKey, sortOrder).apply();
+                    reloadMovieList(sortOrder);
+                }
             }
 
             @Override
@@ -123,7 +125,6 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
 
         String sortOrder = sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]);
         sortOrderSpinner.setSelection(Arrays.asList(sortOrderValues).indexOf(sortOrder));
-
 
         movieListView.setLayoutManager(new GridLayoutManager(activity, gridViewColumnCount));
 
@@ -166,7 +167,6 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
 
         if (savedInstanceState == null)
             getLoaderManager().initLoader(LOADER_ID, constructLoaderArgs(sortOrder), this);
-
     }
 
     @Override
@@ -217,7 +217,6 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
 
     @Override
     public void onLoaderReset(@NonNull Loader<List<Movie>> loader) {
-
     }
 
     @Override
