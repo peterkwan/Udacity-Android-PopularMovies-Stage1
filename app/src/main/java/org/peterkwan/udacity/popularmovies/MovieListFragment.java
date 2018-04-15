@@ -113,8 +113,10 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
                 String sortOrder = sortOrderValues[position];
                 if (!sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]).equals(sortOrder)) {
                     sharedPreferences.edit().putString(sortOrderPrefKey, sortOrder).apply();
-                    reloadMovieList(sortOrder);
+                    movieListAdapter.setMovieList(null);
+                    mListener.onMovieItemSelected(null);
                 }
+                reloadMovieList(sortOrder);
             }
 
             @Override
@@ -258,7 +260,6 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     }
 
     private void reloadMovieList(String sortOrder) {
-        movieListAdapter.setMovieList(null);
         getLoaderManager().restartLoader(LOADER_ID, constructLoaderArgs(sortOrder), this);
     }
 

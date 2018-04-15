@@ -14,15 +14,23 @@ public class MainActivity extends BaseActivity implements MovieListFragment.OnMo
 
     private static final String MOVIE = "movie";
 
+    private Movie movie;
+
     @BindBool(R.bool.two_pane_layout)
     boolean isTwoPaneLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if (savedInstanceState != null && savedInstanceState.containsKey(MOVIE))
+            movie = savedInstanceState.getParcelable(MOVIE);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         ButterKnife.bind(this);
+
+        if (movie != null)
+            displayMovieDetail();
     }
 
     @Override
@@ -43,8 +51,19 @@ public class MainActivity extends BaseActivity implements MovieListFragment.OnMo
 
     @Override
     public void onMovieItemSelected(Movie movie) {
+        this.movie = movie;
+        displayMovieDetail();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putParcelable(MOVIE, movie);
+        super.onSaveInstanceState(outState);
+    }
+
+    private void displayMovieDetail() {
         if (isTwoPaneLayout) {
-            initMovieDetailFragment(movie);
+            initMovieDetailFragment();
         }
         else {
             Intent intent = new Intent(this, MovieDetailActivity.class);
@@ -53,7 +72,7 @@ public class MainActivity extends BaseActivity implements MovieListFragment.OnMo
         }
     }
 
-    private void initMovieDetailFragment(Movie movie) {
+    private void initMovieDetailFragment() {
         Bundle bundle = new Bundle();
         bundle.putParcelable(MOVIE, movie);
 
@@ -62,4 +81,5 @@ public class MainActivity extends BaseActivity implements MovieListFragment.OnMo
 
         replaceFragment(R.id.movieDetailFragmentContainer, fragment, null);
     }
+
 }
