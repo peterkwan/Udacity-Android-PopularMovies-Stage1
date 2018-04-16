@@ -306,7 +306,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
                 return null;
 
             try {
-                String resultJson = NetworkUtils.retrieveMovieListFromTMdb(args.getString(SORT_ORDER), BuildConfig.API_KEY);
+                String resultJson = NetworkUtils.retrieveMovieListFromTMdb(args.getString(SORT_ORDER));
                 return JsonUtils.constructMovieListFromJson(resultJson);
             } catch (IOException | JSONException e) {
                 Log.e(LOG_TAG, "Error loading data", e);

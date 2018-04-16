@@ -5,6 +5,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.support.annotation.NonNull;
 
+import org.peterkwan.udacity.popularmovies.BuildConfig;
+
 import java.io.IOException;
 
 import okhttp3.HttpUrl;
@@ -21,13 +23,13 @@ public final class NetworkUtils {
     private static final String CLOSE = "close";
     private static final String CONNECTION = "connection";
 
-    public static String retrieveMovieListFromTMdb(String sortOrder, String apiKey) throws IOException {
+    public static String retrieveMovieListFromTMdb(String sortOrder) throws IOException {
         HttpUrl url = HttpUrl.parse(String.format(QUERY_URL, sortOrder));
         if (url == null)
             return null;
 
         HttpUrl.Builder builder = url.newBuilder();
-        builder.addQueryParameter(API_KEY, apiKey);
+        builder.addQueryParameter(API_KEY, BuildConfig.TMDB_API_KEY);
 
         Request request = new Request.Builder()
                 .url(builder.toString())
