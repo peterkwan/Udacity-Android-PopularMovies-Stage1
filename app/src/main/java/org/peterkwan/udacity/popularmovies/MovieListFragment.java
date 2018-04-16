@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import butterknife.BindArray;
+import butterknife.BindBool;
 import butterknife.BindInt;
 import butterknife.BindString;
 import butterknife.BindView;
@@ -63,8 +64,8 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     private OnMovieListClickListener mListener;
     private MovieListAdapter movieListAdapter;
     private Unbinder unbinder;
-    private ArrayList<Movie> movieList;
-    private Context activity;
+    private List<Movie> movieList;
+    private Context context;
     private SharedPreferences sharedPreferences;
 
     @BindView(R.id.sortOrderSpinner)
@@ -91,6 +92,9 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     @BindInt(R.integer.grid_view_column_count)
     int gridViewColumnCount;
 
+    @BindBool(R.bool.two_pane_layout)
+    boolean isTwoPaneLayout;
+
     private static Handler handler;
 
     @Override
@@ -103,9 +107,9 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
         View rootView = inflater.inflate(R.layout.fragment_movie_list, container, false);
 
         unbinder = ButterKnife.bind(this, rootView);
-        activity = getActivity();
+        context = getActivity();
 
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity);
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
 
         sortOrderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -114,9 +118,12 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
                 if (!sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]).equals(sortOrder)) {
                     sharedPreferences.edit().putString(sortOrderPrefKey, sortOrder).apply();
                     movieListAdapter.setMovieList(null);
-                    mListener.onMovieItemSelected(null);
+
+                    if (isTwoPaneLayout)
+                        mListener.onMovieItemSelected(null);
+
+                    reloadMovieList(sortOrder);
                 }
-                reloadMovieList(sortOrder);
             }
 
             @Override
@@ -128,7 +135,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
         String sortOrder = sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]);
         sortOrderSpinner.setSelection(Arrays.asList(sortOrderValues).indexOf(sortOrder));
 
-        movieListView.setLayoutManager(new GridLayoutManager(activity, gridViewColumnCount));
+        movieListView.setLayoutManager(new GridLayoutManager(context, gridViewColumnCount));
 
         handler = new Handler(this);
 
@@ -169,6 +176,8 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
 
         if (savedInstanceState == null)
             getLoaderManager().initLoader(LOADER_ID, constructLoaderArgs(sortOrder), this);
+        else
+            reloadMovieList(sortOrder);
     }
 
     @Override
@@ -201,7 +210,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
-        outState.putParcelableArrayList(MOVIE_LIST, movieList);
+        outState.putParcelableArrayList(MOVIE_LIST, new ArrayList<>(movieList));
         super.onSaveInstanceState(outState);
     }
 
@@ -214,7 +223,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     @NonNull
     @Override
     public Loader<List<Movie>> onCreateLoader(int id, @Nullable Bundle args) {
-        return new AsyncMovieTaskLoader(activity, args);
+        return new AsyncMovieTaskLoader(context, args);
     }
 
     @Override
@@ -225,9 +234,10 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     public void onLoadFinished(@NonNull Loader<List<Movie>> loader, List<Movie> data) {
         sendMessageToUIThread(LOAD_DATA_FINISHED);
         movieListAdapter.setMovieList(data);
+        movieList = data;
 
         if (data == null)
-            showMessageDialog(activity, R.string.movie_list_error_title, movieListLoadDataErrorMsg, android.R.drawable.ic_dialog_alert);
+            showMessageDialog(context, R.string.movie_list_error_title, movieListLoadDataErrorMsg, android.R.drawable.ic_dialog_alert);
         else
             movieListView.setVisibility(View.VISIBLE);
     }
@@ -248,8 +258,8 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     /**
      * This interface must be implemented by activities that contain this
      * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
+     * to the context and potentially other fragments contained in that
+     * context.
      * <p>
      * See the Android Training lesson <a href=
      * "http://developer.android.com/training/basics/fragments/communicating.html"
@@ -276,7 +286,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     }
 
     static class AsyncMovieTaskLoader extends AsyncTaskLoader<List<Movie>> {
-        List<Movie> movies = null;
+        List<Movie> movies;
         final Bundle args;
 
         AsyncMovieTaskLoader(Context context, Bundle args) {
