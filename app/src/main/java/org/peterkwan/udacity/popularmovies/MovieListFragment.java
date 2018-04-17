@@ -52,14 +52,11 @@ import lombok.NoArgsConstructor;
  */
 @NoArgsConstructor
 public class MovieListFragment extends BaseFragment implements MovieListAdapter.MovieListItemClickListener,
-        LoaderManager.LoaderCallbacks<List<Movie>>, Handler.Callback {
+        LoaderManager.LoaderCallbacks<List<Movie>> {
 
-    private static final String LOG_TAG = MovieListFragment.class.getSimpleName();
     private static final int LOADER_ID = 1;
     private static final String MOVIE_LIST = "movieList";
     private static final String SORT_ORDER = "sortOrder";
-    private static final int LOAD_DATA_FINISHED = 101;
-    private static final int LOAD_DATA_STARTING = 102;
 
     private OnMovieListClickListener mListener;
     private MovieListAdapter movieListAdapter;
@@ -95,8 +92,6 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     @BindBool(R.bool.two_pane_layout)
     boolean isTwoPaneLayout;
 
-    private static Handler handler;
-
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -111,17 +106,23 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
 
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
 
+        movieListAdapter = new MovieListAdapter(this);
+        movieListView.setAdapter(movieListAdapter);
+        movieListView.setHasFixedSize(true);
+        movieListView.setLayoutManager(new GridLayoutManager(context, gridViewColumnCount));
+
         sortOrderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String sortOrder = sortOrderValues[position];
                 if (!sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]).equals(sortOrder)) {
                     sharedPreferences.edit().putString(sortOrderPrefKey, sortOrder).apply();
-                    movieListAdapter.setMovieList(null);
 
                     if (isTwoPaneLayout)
                         mListener.onMovieItemSelected(null);
 
+                    movieListAdapter.setMovieList(null);
+                    movieList = null;
                     reloadMovieList(sortOrder);
                 }
             }
@@ -135,10 +136,6 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
         String sortOrder = sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]);
         sortOrderSpinner.setSelection(Arrays.asList(sortOrderValues).indexOf(sortOrder));
 
-        movieListView.setLayoutManager(new GridLayoutManager(context, gridViewColumnCount));
-
-        handler = new Handler(this);
-
         return rootView;
     }
 
@@ -146,13 +143,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        String sortOrder = sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]);
-
         final View rootView = getView();
-
-        movieListAdapter = new MovieListAdapter(this);
-        movieListView.setAdapter(movieListAdapter);
-        movieListView.setHasFixedSize(true);
 
         if (rootView != null && rootView.getViewTreeObserver() != null) {
             rootView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -174,6 +165,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
             });
         }
 
+        String sortOrder = sharedPreferences.getString(sortOrderPrefKey, sortOrderValues[0]);
         if (savedInstanceState == null)
             getLoaderManager().initLoader(LOADER_ID, constructLoaderArgs(sortOrder), this);
         else
@@ -210,7 +202,7 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
-        outState.putParcelableArrayList(MOVIE_LIST, new ArrayList<>(movieList));
+        outState.putParcelableArrayList(MOVIE_LIST, movieList == null ? null : new ArrayList<>(movieList));
         super.onSaveInstanceState(outState);
     }
 
@@ -223,18 +215,22 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
     @NonNull
     @Override
     public Loader<List<Movie>> onCreateLoader(int id, @Nullable Bundle args) {
-        return new AsyncMovieTaskLoader(context, args);
+        if (movieList == null)
+            progressBar.setVisibility(View.VISIBLE);
+        return new MovieListAsyncTaskLoader(context, args);
     }
 
     @Override
     public void onLoaderReset(@NonNull Loader<List<Movie>> loader) {
+
     }
 
     @Override
     public void onLoadFinished(@NonNull Loader<List<Movie>> loader, List<Movie> data) {
-        sendMessageToUIThread(LOAD_DATA_FINISHED);
-        movieListAdapter.setMovieList(data);
+
+        progressBar.setVisibility(View.INVISIBLE);
         movieList = data;
+        movieListAdapter.setMovieList(data);
 
         if (data == null)
             showMessageDialog(context, R.string.movie_list_error_title, movieListLoadDataErrorMsg, android.R.drawable.ic_dialog_alert);
@@ -242,19 +238,6 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
             movieListView.setVisibility(View.VISIBLE);
     }
 
-    @Override
-    public boolean handleMessage(Message msg) {
-        if (msg != null) {
-            int messageId = msg.what;
-
-            if (messageId == LOAD_DATA_FINISHED)
-                progressBar.setVisibility(View.INVISIBLE);
-            else if (messageId == LOAD_DATA_STARTING)
-                progressBar.setVisibility(View.VISIBLE);
-        }
-
-        return true;
-    }
     /**
      * This interface must be implemented by activities that contain this
      * fragment to allow an interaction in this fragment to be communicated
@@ -279,55 +262,4 @@ public class MovieListFragment extends BaseFragment implements MovieListAdapter.
         return args;
     }
 
-    private static void sendMessageToUIThread(int messageId) {
-        Message msg = new Message();
-        msg.what = messageId;
-        handler.sendMessage(msg);
-    }
-
-    static class AsyncMovieTaskLoader extends AsyncTaskLoader<List<Movie>> {
-        List<Movie> movies;
-        final Bundle args;
-
-        AsyncMovieTaskLoader(Context context, Bundle args) {
-            super(context);
-            this.args = args;
-        }
-
-        @Override
-        protected void onStartLoading() {
-            super.onStartLoading();
-
-            if (movies != null)
-                deliverResult(movies);
-            else {
-                sendMessageToUIThread(LOAD_DATA_STARTING);
-                forceLoad();
-            }
-        }
-
-        @Nullable
-        @Override
-        public List<Movie> loadInBackground() {
-            if (args == null || !args.containsKey(SORT_ORDER))
-                return null;
-
-            if (NetworkUtils.isNetworkDisconnected(getContext()))
-                return null;
-
-            try {
-                String resultJson = NetworkUtils.retrieveMovieListFromTMdb(args.getString(SORT_ORDER));
-                return JsonUtils.constructMovieListFromJson(resultJson);
-            } catch (IOException | JSONException e) {
-                Log.e(LOG_TAG, "Error loading data", e);
-                return null;
-            }
-        }
-
-        @Override
-        public void deliverResult(@Nullable List<Movie> data) {
-            movies = data;
-            super.deliverResult(data);
-        }
-    }
 }
