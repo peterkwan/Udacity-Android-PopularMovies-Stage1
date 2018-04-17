@@ -15,7 +15,7 @@ import java.util.Locale;
 public final class JsonUtils {
 
     private static final String RESULTS = "results";
-    private static final String ID = "ID";
+    private static final String ID = "id";
     private static final String TITLE = "title";
     private static final String ORIGINAL_TITLE = "original_title";
     private static final String PLOT_SYNOPSIS = "overview";
